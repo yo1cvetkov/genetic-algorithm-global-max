@@ -12,17 +12,16 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 VIRIDIS = [(68, 1, 84), (59, 82, 139), (33, 145, 140), (94, 201, 98), (253, 231, 37)]
 
-def maxfunc(sample):
-    x, y = sample
-    return (16. * x * (1 - x) * y * (1 - y) * np.sin(15. * np.pi * x) * np.sin(15. * np.pi * y)) ** 2
+# def maxfunc(sample):
+#     x, y = sample
+#     return (16. * x * (1 - x) * y * (1 - y) * np.sin(15. * np.pi * x) * np.sin(15. * np.pi * y)) ** 2
 
-local_maxima = [
-    (0.2, 0.8),
-    (0.5, 0.5),
-    (0.8, 0.2),
-]
+local_maxima = []
 
 def custom_fitness(sample):
+
+    if not local_maxima:
+        return 0
     x, y = sample
     distances = [np.sqrt((x - mx)**2 + (y - my)**2) for mx, my in local_maxima]
     fitness = np.exp(-10 * np.min(distances))  
@@ -62,11 +61,12 @@ def evolve(sample):
 
 def draw_rectangles(screen, sample):
     screen.fill(BLACK)
-    max_fitness = custom_fitness((0.5, 0.5)) 
+    max_fitness = custom_fitness((0.5, 0.5)) if local_maxima else 1 
     for (x, y) in sample:
         fitness_value = custom_fitness((x, y))
         if max_fitness > 0:
             color_index = int((fitness_value / max_fitness) * (len(VIRIDIS) - 1))
+            color_index = max(0, min(color_index, len(VIRIDIS) - 1))
         else:
             color_index = 0
         color = VIRIDIS[color_index]
@@ -74,6 +74,7 @@ def draw_rectangles(screen, sample):
     pygame.display.flip()
 
 def main():
+    global local_maxima
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption('Genetic algorithm - finding global maximum')
 
@@ -85,8 +86,12 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                x,y = pygame.mouse.get_pos()
+                local_maxima.append((x / SCREEN_WIDTH, y / SCREEN_HEIGHT))
+                draw_rectangles(screen, sample)
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN and local_maxima:
                     sample = evolve(sample)
                     draw_rectangles(screen, sample)
                 if event.key == pygame.K_i:
